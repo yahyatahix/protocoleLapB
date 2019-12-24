@@ -17,13 +17,20 @@
     void ajouter_bit_transparence(char *trame);
     void ajouter_bit_parite(char* trame);
 
-    void trait(int fdr,int fdq;);             /* traitement du serveur */
+    void trait(int fdr,int fdq;);
+    
+    char *crc(char *quest);
+    char *xor(char *s1,char *s2);
+    
+    /* traitement du serveur */
+    void enleverFcs(char *trame, char fcs[16]);
     void enlever_bit_parite(char *trame);
-    int enlever_bit_transparence(char *trame);
+    void verifierCRC(char *fcs , char * quest);
+    int  enlever_bit_transparence(char *trame);
     void enlever_fanion(char *trame);
 
 
-main()
+void main()
 {
     int fdq, fdr;
     unlink(QUESTION); //The unlink function deletes the file name filename
@@ -73,26 +80,36 @@ int fdr, fdq;
     while (1) {
         char quest[100];
         char rep[100];
+        char fcs[16];
         read(fdq, quest, 100); //lit la question à l'aide du buffer  quest
 
         //sscanf(quest, "%s", trame); // sscanf permet de lire dans buffer  quest la question
-        if (strcmp(quest, "Ciao") == 0) {
-            strcpy(rep, "Bye");
+        if (strcmp(quest, "01010011\0") == 0) {
+            printf(" \n ************ trame non numéroté UA \n");
+            strcpy(rep, "01110011\0");
             write(fdr, rep, 10);
+            printf(" \n Bye serveur \n");
             break;
         }  
 
         enlever_fanion(quest);
-        printf("\n éliminer le fanion  \n");
+        printf("\n **************éliminer le fanion ************** \n");
         puts(quest);
 
         enlever_bit_transparence(quest);
-        printf("\n éliminer les bits de transparence \n" );
+        printf("\n  **************éliminer les bits de transparence  **************\n" );
         puts(quest);
 
-        enlever_bit_parite(quest);
-        printf("\n  éliminer le bit de parité \n" );
+        enleverFcs(quest,fcs);
+        printf("\n **************fcs enlever est :  ************** %s  \n", fcs);
+
+        printf(" ************** quest reçu :  **************\n");
         puts(quest);
+
+        //printf("\n  vérifier crc\n" );
+        //verifierCRC(fcs ,  quest);
+        //puts(quest);
+
         
         sprintf(rep, "%s", quest); //ssprintf permet d'écrire dans le buffer rep la reponse
         write(fdr, rep, 100);
@@ -218,4 +235,113 @@ void enlever_fanion(char *trame)
         }
     resu[i-8]='\0';
     strcpy(trame,resu);
+}
+
+void enleverFcs(char *trame, char fcs[16])
+{
+    char resu[100];
+    int i;
+    for(i=0;i<strlen(trame);i++)
+        {   
+            if (i<strlen(trame)-16)
+            {
+                resu[i]=trame[i];
+            }
+            else
+                fcs[i-strlen(trame)+16]=trame[i];
+            
+        }
+    fcs[16]='\0';
+
+    resu[strlen(trame)-16]='\0';
+    strcpy(trame,resu);
+
+}
+
+void verifierCRC(char *fcs , char * quest)
+{   int l;
+    char copyQuest[100];
+    char fcs2[5];
+            strcpy(copyQuest,quest);
+            char *c = crc(copyQuest);
+            printf("crc\n");
+            puts(c);
+            //ajouter crc
+            
+            l=strlen(c);
+
+            for(int i=l-16;i<l;i++)
+            {  
+                fcs2[i-l+16]=c[i];
+            }
+            printf("fcs l= %d\n",l);
+            puts(fcs2);
+
+        if(strcmp(fcs,fcs2)==0)
+            printf("message bien recue\n");
+        else 
+            printf("message errone\n");
+}
+
+
+char * crc(char * quest)
+{ 
+
+    char *s2="10001000000100001";//le polynome generateur
+    char temp[18];
+    char *result=malloc(sizeof(char)*18);
+    //strcat(d,quest);
+    strcat(quest,"0000000000000000");//on multiplie le polynome du msg par le degre du generateur
+    int k,p=0,i=0,j=16;
+    i=0;
+    int lenght = strlen(quest);
+    while(j<lenght)
+    {
+        for(k=i;k<j+1;k++)
+        {
+            temp[k-i]=quest[k];
+        }
+        temp[j+1]='\0';
+        result = xor(temp,s2);
+        k=p;
+        while(result[k-p]!='\0')
+        { 
+            quest[k]=result[k-p];
+            k++;  
+        }
+        p=0;
+        while(quest[p]=='0')
+        {
+            p++;
+        }
+        i=0;
+        j=16;
+        i+=p;
+        j+=p;
+    } 
+    return quest;
+}
+
+//Fonction XOR (ou exclusif)
+//Cette fonction calcule le ou exclusif de deux chaines est retourne une chaine résultat 
+//que je l’utilise pour calculer le CRC.
+
+char * xor(char *s1,char *s2)
+{
+  char * temp=malloc(sizeof(char)*17);
+  int i;
+  for(i=0;i<17;i++)
+  {
+    if(*(s1+i)== *(s2+i))
+    {
+      *(temp+i) = '0';
+    }
+    else
+    {
+      *(temp+i) = '1';
+    }
+
+  }
+  temp[i]='\0';
+  return temp;
 }

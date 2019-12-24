@@ -20,11 +20,13 @@ void ajouter_bit_transparence(char *trame);
 void ajouter_bit_parite(char* trame);
 
 
-void enlever_bit_parite(char *trame);
+//void enlever_bit_parite(char *trame);
+char *crc(char * quest);
+char *xor(char *s1,char *s2);
 int enlever_bit_transparence(char *trame);
 void enlever_fanion(char *trame);
 
-main()
+void main()
 {
     int fdq, fdr;
     
@@ -77,7 +79,10 @@ void trait(int fdr, int fdq)
 
     while (1) {
         char quest[100] = "";
-        
+        char copyQuest[100]="";
+        char fcs[16];
+        int l;
+
         printf("\n\n entrer les données en binaire à envoyer à l'aide du protocole lapB  :\n");
         
         if (gets(quest) == NULL)
@@ -85,29 +90,74 @@ void trait(int fdr, int fdq)
 
         if (strcmp(quest, "Ciao") != 0)
         {
-            ajouter_bit_parite(quest);
-            printf("\n ajout du bit de parité \n");
+            //ajouter_bit_parite(quest);
+            //printf("\n ajout du bit de parité \n");
+            //puts(quest);
+            strcpy(copyQuest,quest);
+            char *c = crc(copyQuest);
+            //printf("\n **************crc **************\n");
+            //puts(c);
+            //ajouter crc
+            
+            l=strlen(c);
+
+            for(int i=l-16;i<l;i++)
+            {  
+                fcs[i-l+16]=c[i];
+            }
+            printf("\n ************** fcs **************\n",l);
+            puts(fcs);
+
+            printf("\n  ************** ajout du fcs  **************\n");
+            strcat(quest,fcs);
             puts(quest);
 
+
             ajouter_bit_transparence(quest) ;
-            printf("\n ajout des bits de transparence \n" );
+            printf("\n  ************** ajout des bits de transparence  ************** \n" );
             puts(quest);
             
             ajouter_fanion(quest) ;
-            printf("\n ajout du fanion  \n" );
+            printf("\n  ************** ajout du fanion  ************** \n" );
             puts(quest);
+        }
+
+        if (strcmp(quest, "Ciao") == 0)
+        {
+            /*
+            Les trames non numérotées ou trames  U (Unnumbered) sont utilisées pour  
+            toutes les fonctions de contrôle de la liaison telles que l’initialisation, 
+            la libération... Elles ne transportent pas de données.
+            */
+            printf(" \n************** trame non numéroté DISC  **************\n");
+            strcpy(quest, "01010011\0"); //trame non numéroté DISC
+            puts(quest);
+            //traitement
+            ajouter_fanion(quest) ;
+            strcpy(copyQuest,quest);
+            char *c = crc(copyQuest);
+            l=strlen(c);
+            for(int i=l-16;i<l;i++)
+            {  
+                fcs[i-l+16]=c[i];
+            }
+            strcat(quest,fcs);
+
+
+
         }
 
 
         write(fdq, quest, 100);   //écrire la question dans le buffer  quest
-        printf("Client ->  \n");
+        printf("\n Client ->  \n");
         puts(quest);
 
         read(fdr, rep, 100);
-        printf("Serveur ->  \n");
+        printf("\n Serveur ->  \n");
         puts(rep);
         
-        if (strcmp(rep, "Bye") == 0)
+        if (strcmp(rep, "01110011\0") == 0)
+            printf("\n Bye client \n");
             break;
     }
 }
@@ -115,6 +165,71 @@ void trait(int fdr, int fdq)
 /*
 Ajouter
 */
+
+
+//Fonction CRC :
+//Fonction qui calcule le crc sur un message afin de pouvoir toujours détecter les erreurs de certains types,
+// comme celles dues par exemple, aux interférences lors de la transmission.
+
+char *crc(char *quest)
+{ 
+    char *s2="10001000000100001";//le polynome generateur
+    char temp[18];
+    char *result=malloc(sizeof(char)*18);
+    //strcat(d,quest);
+    strcat(quest,"0000000000000000");//on multiplie le polynome du msg par le degre du generateur
+    int k,p=0,i=0,j=16;
+    i=0;
+    int lenght = strlen(quest);
+    while(j<lenght)
+    {
+        for(k=i;k<j+1;k++)
+        {
+            temp[k-i]=quest[k];
+        }
+        temp[j+1]='\0';
+        result = xor(temp,s2);
+        k=p;
+        while(result[k-p]!='\0')
+        { 
+            quest[k]=result[k-p];
+            k++;  
+        }
+        p=0;
+        while(quest[p]=='0')
+        {
+            p++;
+        }
+        i=0;
+        j=16;
+        i+=p;
+        j+=p;
+    } 
+    return quest;
+}
+//Fonction XOR (ou exclusif)
+//Cette fonction calcule le ou exclusif de deux chaines est retourne une chaine résultat 
+//que je l’utilise pour calculer le CRC.
+
+char * xor(char *s1,char *s2)
+{
+  char * temp=malloc(sizeof(char)*17);
+  int i;
+  for(i=0;i<17;i++)
+  {
+    if(*(s1+i)== *(s2+i))
+    {
+      *(temp+i) = '0';
+    }
+    else
+    {
+      *(temp+i) = '1';
+    }
+
+  }
+  temp[i]='\0';
+  return temp;
+}
 
 void ajouter_fanion(char * trame)
 {
