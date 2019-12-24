@@ -69,6 +69,7 @@ void trait(int fdr, int fdq)
 /* fdr et fdq descripteurs reponse/question */
 {
     char rep[100];
+    int numTrame=0;
     
 /* traitement client
    * lecture de la trame
@@ -105,6 +106,7 @@ void trait(int fdr, int fdq)
             {  
                 fcs[i-l+16]=c[i];
             }
+            fcs[16] = '\0';
             printf("\n ************** fcs **************\n",l);
             puts(fcs);
 
@@ -129,7 +131,7 @@ void trait(int fdr, int fdq)
             toutes les fonctions de contrôle de la liaison telles que l’initialisation, 
             la libération... Elles ne transportent pas de données.
             */
-            printf(" \n************** trame non numéroté DISC  **************\n");
+            printf(" \n************** trame non numéroté DISC de demande de la deconnexion  **************\n");
             strcpy(quest, "01010011\0"); //trame non numéroté DISC
             puts(quest);
             //traitement
@@ -141,6 +143,7 @@ void trait(int fdr, int fdq)
             {  
                 fcs[i-l+16]=c[i];
             }
+            fcs[16]='\0';
             strcat(quest,fcs);
 
 
@@ -156,10 +159,16 @@ void trait(int fdr, int fdq)
         printf("\n Serveur ->  \n");
         puts(rep);
         
-        if (strcmp(rep, "01110011\0") == 0)
+        if (strcmp(rep, "01110011\0") == 0){
             printf("\n Bye client \n");
             break;
-    }
+        }
+
+        printf("\n\n\n\n trame numéro : %d \n", numTrame); 
+        numTrame++;
+    }  
+
+    
 }
 
 /*

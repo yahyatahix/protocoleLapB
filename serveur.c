@@ -70,7 +70,7 @@ int fdr, fdq;
     
     //char *trame ;
     
-
+int numTrame = 0;
 /* traitement serveur
    * envoi reponse a question
    * trame  venant de client.
@@ -84,13 +84,7 @@ int fdr, fdq;
         read(fdq, quest, 100); //lit la question à l'aide du buffer  quest
 
         //sscanf(quest, "%s", trame); // sscanf permet de lire dans buffer  quest la question
-        if (strcmp(quest, "01010011\0") == 0) {
-            printf(" \n ************ trame non numéroté UA \n");
-            strcpy(rep, "01110011\0");
-            write(fdr, rep, 10);
-            printf(" \n Bye serveur \n");
-            break;
-        }  
+         
 
         enlever_fanion(quest);
         printf("\n **************éliminer le fanion ************** \n");
@@ -101,19 +95,28 @@ int fdr, fdq;
         puts(quest);
 
         enleverFcs(quest,fcs);
-        printf("\n **************fcs enlever est :  ************** %s  \n", fcs);
+        printf("\n **************fcs enlever est :  ************** \n%s  \n", fcs);
 
-        printf(" ************** quest reçu :  **************\n");
+        printf("\n ************** quest reçu :  **************\n");
         puts(quest);
+
 
         //printf("\n  vérifier crc\n" );
         //verifierCRC(fcs ,  quest);
         //puts(quest);
-
+        if (strcmp(quest,"01010011\0") == 0) {
+            printf(" \n ************ trame non numéroté UA : réponse à la demande à la deconnexion  ******************\n");
+            strcpy(rep, "01110011\0");
+            write(fdr, rep, 10);
+            printf(" \n Bye serveur \n");
+            break;
+        } 
         
         sprintf(rep, "%s", quest); //ssprintf permet d'écrire dans le buffer rep la reponse
         write(fdr, rep, 100);
 
+        printf("\n\n\n\n trame numéro : %d \n", numTrame); 
+        numTrame++;
          
     }
 }
